@@ -6,8 +6,15 @@ pipeline {
     environment {
         COMPOSE_PROJECT_NAME = 'airflow_simulation'
         CONTAINER_NAME = 'airflow_container'
-        DEPLOY_SERVER = 'ubuntu@169.63.102.13'
+        DEPLOY_USER = 'ubuntu'
+        DEPLOY_HOST = '169.63.102.13'
+        DEPLOY_SERVER = "${DEPLOY_USER}@${DEPLOY_HOST}"
+        REMOTE_HOME = '/home/ubuntu'
+        IMAGE_NAME = 'airflow-image'
+        IMAGE_FILE = 'airflow-image.tar'
         SSH_CREDENTIAL_ID = 'bizbook-rsa-key'
+        ENV_FILE = '.env'
+        LOCAL_ENV_PATH = './.env'
     }
 
     stages {
@@ -19,17 +26,18 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                sh 'docker build -t airflow-image ./airflow'
+                sh "docker build -t ${IMAGE_NAME} ./airflow"
             }
         }
 
         stage('Transfer Files to Remote Server') {
             steps {
-                sshagent (credentials: ["${SSH_CREDENTIAL_ID}"]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDENTIAL_ID}", keyFileVariable: 'SSH_KEY')]) {
                     sh """
-                        docker save airflow-image -o airflow-image.tar
-                        scp airflow-image.tar ${DEPLOY_SERVER}:/home/ubuntu/
-                        scp .env ${DEPLOY_SERVER}:/home/ubuntu/
+                        docker save ${IMAGE_NAME} -o ${IMAGE_FILE}
+                        chmod 600 \$SSH_KEY
+                        scp -i \$SSH_KEY -o StrictHostKeyChecking=no ${IMAGE_FILE} ${DEPLOY_SERVER}:${REMOTE_HOME}/
+                        scp -i \$SSH_KEY -o StrictHostKeyChecking=no ${LOCAL_ENV_PATH} ${DEPLOY_SERVER}:${REMOTE_HOME}/
                     """
                 }
             }
@@ -37,12 +45,12 @@ pipeline {
 
         stage('Deploy on Remote Server') {
             steps {
-                sshagent (credentials: ["${SSH_CREDENTIAL_ID}"]) {
+                withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDENTIAL_ID}", keyFileVariable: 'SSH_KEY')]) {
                     sh """
-                        ssh ${DEPLOY_SERVER} '
-                            docker load -i airflow-image.tar &&
+                        ssh -i \$SSH_KEY -o StrictHostKeyChecking=no ${DEPLOY_SERVER} '
+                            docker load -i ${IMAGE_FILE} &&
                             docker rm -f ${CONTAINER_NAME} || true &&
-                            docker run -d --name ${CONTAINER_NAME} -p 8080:8080 --env-file .env airflow-image
+                            docker run -d --name ${CONTAINER_NAME} -p 8080:8080 --env-file ${ENV_FILE} ${IMAGE_NAME}
                         '
                     """
                 }
@@ -51,8 +59,12 @@ pipeline {
 
         stage('Check Airflow Status') {
             steps {
-                sshagent (credentials: ["${SSH_CREDENTIAL_ID}"]) {
-                    sh "ssh ${DEPLOY_SERVER} 'docker ps | grep ${CONTAINER_NAME} || true'"
+                withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDENTIAL_ID}", keyFileVariable: 'SSH_KEY')]) {
+                    sh """
+                        ssh -i \$SSH_KEY -o StrictHostKeyChecking=no ${DEPLOY_SERVER} '
+                            docker ps | grep ${CONTAINER_NAME} || true
+                        '
+                    """
                 }
             }
         }
