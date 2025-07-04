@@ -4,7 +4,8 @@ pipeline {
     }
 
     environment {
-        COMPOSE_PROJECT_NAME = 'airflow_simulation'    
+        COMPOSE_PROJECT_NAME = 'airflow_simulation'
+        CONTAINER_NAME = 'airflow_container'
     }
 
     stages {
