@@ -1,9 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        label 'docker'
+    }
 
     environment {
-        COMPOSE_PROJECT_NAME = 'airflow_simulation'
-        CONTAINER_NAME = "airflow-${env.BUILD_ID}"
+        COMPOSE_PROJECT_NAME = 'airflow_simulation'    
     }
 
     stages {
@@ -15,25 +16,19 @@ pipeline {
 
         stage('Build Services') {
             steps {
-                sh 'docker build -t airflow-image ./airflow'
+                sh 'docker-compose build'
             }
         }
 
-        stage('Remove Old Container') {
+        stage('Start Containers') {
             steps {
-                sh "docker rm -f ${CONTAINER_NAME} || true"
-            }
-        }
-
-        stage('Start Container (Only Airflow)') {
-            steps {
-                sh "docker run -d --name ${CONTAINER_NAME} -p 8080:8080 --env-file .env airflow-image"
+                sh 'docker-compose up -d'
             }
         }
 
         stage('Check Airflow Status') {
             steps {
-                sh "docker ps | grep ${CONTAINER_NAME} || true"
+                sh 'docker ps | grep airflow || true'
             }
         }
     }
