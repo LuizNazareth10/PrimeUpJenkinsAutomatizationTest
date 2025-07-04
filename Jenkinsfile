@@ -27,7 +27,7 @@ pipeline {
 
         stage('Start Container (Only Airflow)') {
             steps {
-                sh "docker run -d --name ${CONTAINER_NAME} -p 8080:8080 --env-file .env.example airflow-image"
+                sh "docker run -d --name ${CONTAINER_NAME} -p 8080:8080 --env-file .env airflow-image"
             }
         }
 
