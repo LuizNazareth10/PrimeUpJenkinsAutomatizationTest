@@ -44,11 +44,11 @@ pipeline {
         }
 
         stage('Deploy on Remote Server') {
-            steps {
+            steps { // Using the SSH key to connect and deploy the Docker container, carrega a imagem .tar para o servidor remoto de deploy, remove um container antigo se existir, e inicia um novo container com a imagem carregada
                 withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDENTIAL_ID}", keyFileVariable: 'SSH_KEY')]) {
                     sh """
                         ssh -i \$SSH_KEY -o StrictHostKeyChecking=no ${DEPLOY_SERVER} '
-                            docker load -i ${IMAGE_FILE} &&
+                            docker load -i ${IMAGE_FILE} && 
                             docker rm -f ${CONTAINER_NAME} || true &&
                             docker run -d --name ${CONTAINER_NAME} -p 8080:8080 --env-file ${ENV_FILE} ${IMAGE_NAME} standalone
                         '
