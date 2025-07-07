@@ -50,7 +50,7 @@ pipeline {
                         ssh -i \$SSH_KEY -o StrictHostKeyChecking=no ${DEPLOY_SERVER} '
                             docker load -i ${IMAGE_FILE} &&
                             docker rm -f ${CONTAINER_NAME} || true &&
-                            docker run -d --name ${CONTAINER_NAME} -p 8080:8080 --env-file ${ENV_FILE} ${IMAGE_NAME}
+                            docker run -d --name ${CONTAINER_NAME} -p 8080:8080 --env-file ${ENV_FILE} ${IMAGE_NAME} standalone
                         '
                     """
                 }
