@@ -1,7 +1,7 @@
-FROM postgres:15
+FROM postgres:latest
 
 # Copia o script de inicialização se necessário
-# COPY init.sql /docker-entrypoint-initdb.d/
+COPY init.sql /docker-entrypoint-initdb.d/
 
 # Define variáveis padrão (podem ser sobrescritas por --env-file)
 ENV POSTGRES_USER=airflow
